@@ -22,10 +22,10 @@ connection.on('data',(data)=>{ // handeling incoming data
         }
         else if(command.startsWith("ECHO"))
         {
-            const argi=commands[i+1];
+            const argi=commands[0];
             if(argi)
             {
-                const resp=`{argi}`;
+                const resp=`${argi}`;
                 connection.write(resp);
             }
             else{
