@@ -25,8 +25,8 @@ connection.on('data',(data)=>{ // handeling incoming data
             const arg=commands[i+1];
             if(arg)
             {
-                const resp=`${arg}\r\n`;
-                connection.write(resp);
+                //const resp=``;
+                connection.write("$" + arg.length + "\r\n" +agr+ "\r\n");
                 i++; // skips the arguemnet
             }
             
