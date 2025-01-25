@@ -18,15 +18,15 @@ connection.on('data',(data)=>{ // handeling incoming data
         const command=commands[i].toUpperCase();
         if(command==='PING')
         {
-           return connection.write('+PONG\r\n');
+            connection.write('+PONG\r\n');
         }
         else if(command==='ECHO')
         {
-            const argi=commands[i+1];
+            const argi=commands[i+2];
             if(argi)
             {
                // const resp=`$${argi.length}\r\n${argi}\r\n`;
-               return connection.write(`$${Buffer.byteLength(argi)}\r\n${argi}\r\n`);
+               connection.write(`$${Buffer.byteLength(argi)}\r\n${argi}\r\n`);
                 //i++;
             }
             else{
