@@ -25,15 +25,13 @@ connection.on('data',(data)=>{ // handeling incoming data
             const arg=commands[i+1];
             if(arg)
             {
-                //const resp=``;
-                connection.write("$" + arg.length + "\r\n" +agr+ "\r\n");
-                i++; // skips the arguemnet
+                const resp=`$${arg.length}\r\n${arg}\r\n`;
+                connection.write(resp);
             }
-            
             else{
                 connection.write('-Error: Missing argument for ECHO\r\n');
             }
-            
+            i++;
         }
     }
     
