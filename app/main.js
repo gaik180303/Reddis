@@ -42,7 +42,7 @@ connection.on('data',(data)=>{ // handeling incoming data
         else if(command==='SET')
             {
                 let expiry=null;
-                expiry=parseInt(commands[i+6],10);
+                expiry=parseInt(commands[i+8],10);
                 
                 myMap.set(commands[i+2],{value: commands[i+4], expiryTime:expiry?Date.now()+expiry:null});
                 connection.write('+OK\r\n');
