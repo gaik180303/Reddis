@@ -43,6 +43,7 @@ connection.on('data',(data)=>{ // handeling incoming data
                 
                 myMap.set(commands[i+2],commands[i+4]);
                 connection.write('+OK\r\n');
+                i++;
             }
         else if(command==='GET')
             {
@@ -52,7 +53,7 @@ connection.on('data',(data)=>{ // handeling incoming data
                     connection.write(`$${str.length}\r\n${str}\r\n`)
                 }
                 else {
-                    connection.write('$-1\r\n');  // nil response in Redis protocol
+                    connection.write("$-1\r\n");  // nil response in Redis protocol
                   }
                 
             }
