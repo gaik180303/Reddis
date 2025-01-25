@@ -26,7 +26,7 @@ connection.on('data',(data)=>{ // handeling incoming data
             if(argi)
             {
                // const resp=`$${argi.length}\r\n${argi}\r\n`;
-               connection.write(`$${Buffer.byteLength(argi)}\r\n${argi}\r\n`);
+               connection.write(`$${argi.length}\r\n${argi}\r\n`);
                 //i++;
             }
             else{
