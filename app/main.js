@@ -9,11 +9,12 @@ const net = require("net"); // for creating the tcp server
 // Uncomment this block to pass the first stage
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
+const myMap=new Map();
 connection.on('data',(data)=>{ // handeling incoming data
     const commands = Buffer.from(data).toString().split("\r\n"); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
     //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
     
-    const myMap=new Map();
+    
 
     for(let i=0;i<commands.length;i++)
     {
