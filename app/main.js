@@ -10,7 +10,7 @@ const net = require("net"); // for creating the tcp server
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
 connection.on('data',(data)=>{ // handeling incoming data
-    const commands =data.toString().trim().split('\r\n').filter(cmd => cmd.length > 0); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
+    const commands = Buffer.from(data).toString().split("\r\n"); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
     //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
     
     for(let i=0;i<commands.length;i++)
@@ -18,7 +18,7 @@ connection.on('data',(data)=>{ // handeling incoming data
         const command=commands[i].toUpperCase();
         if(command==='PING')
         {
-            connection.write('+PONG\r\n');
+           return connection.write('+PONG\r\n');
         }
         else if(command==='ECHO')
         {
@@ -26,8 +26,8 @@ connection.on('data',(data)=>{ // handeling incoming data
             if(argi)
             {
                // const resp=`$${argi.length}\r\n${argi}\r\n`;
-                connection.write(`$${Buffer.byteLength(argi)}\r\n${argi}\r\n`);
-                i++;
+               return connection.write(`$${Buffer.byteLength(argi)}\r\n${argi}\r\n`);
+                //i++;
             }
             else{
                 connection.write('-Error: Missing argument for ECHO\r\n');
