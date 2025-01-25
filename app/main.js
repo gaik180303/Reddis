@@ -47,7 +47,14 @@ connection.on('data',(data)=>{ // handeling incoming data
         else if(command==='GET')
             {
                 const str=myMap.get(commands[i+2]);
-                connection.write(`$${str.length}\r\n${str}\r\n`)
+                if(str)
+                {
+                    connection.write(`$${str.length}\r\n${str}\r\n`)
+                }
+                else {
+                    connection.write('$-1\r\n');  // nil response in Redis protocol
+                  }
+                
             }
     }
     
