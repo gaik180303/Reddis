@@ -46,8 +46,8 @@ connection.on('data',(data)=>{ // handeling incoming data
             }
         else if(command==='GET')
             {
-                //const 
-                connection.write('myMap.get(commands[i+2])\r\n')
+                const str=myMap.get(commands[i+2]);
+                connection.write(`$${str.length}\r\n${str}\r\n`)
             }
     }
     
