@@ -13,7 +13,7 @@ connection.on('data',(data)=>{ // handeling incoming data
     const commands =data.toString().split('\r\n');  //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
     //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
     
-    for(let i=0;i<commands.length;i++)
+    for(let i=0;i<commands.length();i++)
     {
         const command=commands[i].toUpperCase();
         if(command==='PING')
@@ -22,16 +22,16 @@ connection.on('data',(data)=>{ // handeling incoming data
         }
         else if(command.startsWith("ECHO"))
         {
-            const argi=commands[1];
+            const argi=commands[i+1];
             if(argi)
             {
-                const resp=`${argi}`;
+                const resp=`${argi.length()}\r\n${argi}\r\n`;
                 connection.write(resp);
             }
             else{
                 connection.write('-Error: Missing argument for ECHO\r\n');
             }
-           // i++;
+            i++;
         }
     }
     
