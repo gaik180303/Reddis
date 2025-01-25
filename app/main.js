@@ -41,8 +41,10 @@ connection.on('data',(data)=>{ // handeling incoming data
         }
         else if(command==='SET')
             {
+                let expiry=null;
+                expiry=parseInt(commands[i+6],10);
                 
-                myMap.set(commands[i+2],commands[i+4]);
+                myMap.set(commands[i+2],{ commands[i+4] , expiryTime:expiry?Date.now()+expiry:null});
                 connection.write('+OK\r\n');
                 i++;
             }
@@ -51,7 +53,14 @@ connection.on('data',(data)=>{ // handeling incoming data
                 const str=myMap.get(commands[i+2]);
                 if(str)
                 {
-                    connection.write(`$${str.length}\r\n${str}\r\n`)
+                    if(str.expiryTime && Date.now()>str.expiryTime)
+                    {
+                        myMap.delete(commands[i+2]);
+                        connection.write('$-1\r\n');
+                    }
+                    else{
+                        connection.write(`$${str.value.length}\r\n${str.value}\r\n`);
+                    }
                 }
                 else {
                     connection.write("$-1\r\n");  // nil response in Redis protocol
