@@ -41,13 +41,13 @@ connection.on('data',(data)=>{ // handeling incoming data
         else if(command==='SET')
             {
                 
-                myMap.set(command[i+2],command[i+4]);
-                connection.write('OK\r\n');
+                myMap.set(commands[i+2],commands[i+4]);
+                connection.write('+OK\r\n');
             }
         else if(command==='GET')
             {
                 //const 
-                connection.write('myMap.get(command[i+2])\r\n')
+                connection.write('myMap.get(commands[i+2])\r\n')
             }
     }
     
