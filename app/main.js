@@ -13,16 +13,31 @@ connection.on('data',(data)=>{ // handeling incoming data
     const commands =data.toString().split('\r\n');  //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
     //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
     
-    for(const command of commands)
+    for(let i=0;i<commands.length;i++)
     {
-        if(command.toUpperCase()==='PING')
+        const command=commands[i].toUpperCase();
+        if(command==='PING')
         {
             connection.write('+PONG\r\n');
         }
+        else if(command.startsWith("ECHO"))
+        {
+            const arg=commands[i+1];
+            if(arg)
+            {
+                const resp=`$${arg.length}\r\n${arg}\r\n`;
+                connection.write(resp);
+            }
+            else{
+                connection.write('-Error: Missing argument for ECHO\r\n');
+            }
+            i++; // skips the arguemnet
+        }
     }
+    
    
 
-})
+});
 connection.on("end",()=>console.log("Client disconnected")); // connection is  asocket class which represent the connection between the server and client
 });
 
