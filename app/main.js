@@ -13,6 +13,8 @@ connection.on('data',(data)=>{ // handeling incoming data
     const commands = Buffer.from(data).toString().split("\r\n"); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
     //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
     
+    const myMap=new Map();
+
     for(let i=0;i<commands.length;i++)
     {
         const command=commands[i].toUpperCase();
@@ -29,11 +31,23 @@ connection.on('data',(data)=>{ // handeling incoming data
                connection.write(`$${argi.length}\r\n${argi}\r\n`);
                 //i++;
             }
+           
             else{
                 connection.write('-Error: Missing argument for ECHO\r\n');
             }
             //i++;
+
         }
+        else if(command==='SET')
+            {
+                myMap.set(command[i+2],command[i+4]);
+                connection.write(`OK\r\n`);
+            }
+        else if(command==='GET')
+            {
+                //const 
+                connection.write(`myMap.get(command[i+2])\r\n`)
+            }
     }
     
    
