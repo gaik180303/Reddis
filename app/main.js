@@ -25,7 +25,7 @@ connection.on('data',(data)=>{ // handeling incoming data
             const argi=commands[i+1];
             if(argi)
             {
-                const resp=`${argi}`;
+                const resp=`{argi}`;
                 connection.write(resp);
             }
             else{
