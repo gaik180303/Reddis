@@ -44,7 +44,7 @@ connection.on('data',(data)=>{ // handeling incoming data
                 let expiry=null;
                 expiry=parseInt(commands[i+6],10);
                 
-                myMap.set(commands[i+2],{ commands[i+4] , expiryTime:expiry?Date.now()+expiry:null});
+                myMap.set(commands[i+2],{value: commands[i+4], expiryTime:expiry?Date.now()+expiry:null});
                 connection.write('+OK\r\n');
                 i++;
             }
