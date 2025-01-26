@@ -85,21 +85,20 @@ connection.on('data',(data)=>{ // handeling incoming data
                   }
                 
             }
-            else if(command==='CONFIG' && commands[i+2]==='GET')
-            {
-                if(commands[i+4]==='dir')
+            else if (command === 'CONFIG' && i+2 < commands.length && commands[i+2] === 'GET') 
                 {
-                    //const val=dir;
-                    const response = `*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`;
-                    connection.write(response);
+                if (i+4 < commands.length) 
+                    {
+                    if (commands[i+4] === 'dir') 
+                        {
+                        connection.write(`*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`);
+                        }
+                    else if (commands[i+4] === 'dbfilename') 
+                        {
+                        connection.write(`*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`);
+                        }
+                    }
                 }
-                else if(commands[i+4]==='dbfilename')
-                {
-                    //const val=dbfilename;
-                    const response = `*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`;
-                    connection.write(response);
-                }
-            }
     }
     
    
