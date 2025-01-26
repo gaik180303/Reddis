@@ -2,8 +2,27 @@ const net = require("net");
 const os = require("os");
 const path = require("path");
 
-// const dir = process.argv[2] || '/tmp/redis-test-files';
-// const dbfilename = process.argv[3] || 'dump.rdb';
+function parseArgs(argv) {
+    const args = {};
+    for (let i = 0; i < argv.length; i++) {
+        if (argv[i].startsWith('--')) {
+            const key = argv[i].slice(2);
+            const value = argv[i + 1];
+            if (value && !value.startsWith('--')) {
+                args[key] = value;
+                i++; // Skip the next argument since it's the value for the flag
+            }
+        }
+    }
+    return args;
+}
+
+// Parse command-line arguments
+const args = parseArgs(process.argv);
+
+// Get directory and filename from parsed arguments or use defaults
+const dir = args.dir || '/tmp/redis-test-files';
+const dbfilename = args.dbfilename || 'dump.rdb';
 
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
@@ -11,8 +30,7 @@ const myMap=new Map();
 connection.on('data',(data)=>{ // handeling incoming data
     const commands = Buffer.from(data).toString().split("\r\n"); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
     //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
-    const [,, dir, path, dbfilename, file] = process.argv;
-		console.log([dir, path, dbfilename, file]);
+    
     
 
     for(let i=0;i<commands.length;i++)
