@@ -72,12 +72,14 @@ connection.on('data',(data)=>{ // handeling incoming data
             {
                 if(commands[i+4]==='dir')
                 {
-                    const response = `*2\r\n$3\r\ndir\r\n$${commands[i+4].length}\r\n${commands[i+4]}\r\n`;
+                    const val=dir;
+                    const response = `*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`;
                     connection.write(response);
                 }
                 else if(commands[i+4]==='dbfilename')
                 {
-                    const response = `*2\r\n$10\r\ndbfilename\r\n$${commands[i+4].length}\r\n${commands[i+4]}\r\n`;
+                    const val=dbfilename;
+                    const response = `*2\r\n$10\r\ndbfilename\r\n$${val.length}\r\n${val}\r\n`;
                     connection.write(response);
                 }
             }
