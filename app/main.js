@@ -1,4 +1,8 @@
 const net = require("net"); // for creating the tcp server
+const dir = "/tmp"; // Default directory
+const dbfilename = "dump.rdb"; // Default DB file name
+
+
 
 // You can use print statements as follows for debugging, they'll be visible when running tests.
 //console.log("Logs from your program will appear here!");
@@ -7,6 +11,9 @@ const net = require("net"); // for creating the tcp server
 // connection.write(`+PONG\r\n`);
 //   });
 // Uncomment this block to pass the first stage
+
+
+
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
 const myMap=new Map();
@@ -73,7 +80,7 @@ connection.on('data',(data)=>{ // handeling incoming data
                 if(commands[i+4]==='dir')
                 {
                     const val=dir;
-                    const response = `*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`;
+                    const response = `*2\r\n$3\r\ndir\r\n$${val.length}\r\n${val}\r\n`;
                     connection.write(response);
                 }
                 else if(commands[i+4]==='dbfilename')
