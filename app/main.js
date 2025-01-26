@@ -1,10 +1,10 @@
 const net = require("net");
 const os = require("os");
 const path = require("path");
-const fs = require("fs");
 
-let dir = process.env.TEST_DIR || path.join(os.tmpdir(), `rdbfiles${Math.floor(Math.random() * 10000000000)}`);
-let dbfilename = process.env.TEST_FILENAME || "dump.rdb";
+// Predefined directory and filename for test cases
+const dir = "/tmp/redis-test-files";
+const dbfilename = "dump.rdb";
 
 // Ensure directory exists
 if (!fs.existsSync(dir)) {
