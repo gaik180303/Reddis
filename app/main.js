@@ -7,9 +7,9 @@ const dir = "/tmp/redis-test-files";
 const dbfilename = "dump.rdb";
 
 // Ensure directory exists
-if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-}
+// if (!fs.existsSync(dir)) {
+//     fs.mkdirSync(dir, { recursive: true });
+// }
 
 
 // You can use print statements as follows for debugging, they'll be visible when running tests.
