@@ -2,8 +2,8 @@ const net = require("net");
 const os = require("os");
 const path = require("path");
 
-// Read directory and filename from command-line arguments
-const [,, dir = '/tmp/redis-test-files', dbfilename = 'dump.rdb'] = process.argv;
+const dir = process.argv[2] || '/tmp/redis-test-files';
+const dbfilename = process.argv[3] || 'dump.rdb';
 
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
