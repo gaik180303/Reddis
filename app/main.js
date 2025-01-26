@@ -1,7 +1,10 @@
 const net = require("net"); // for creating the tcp server
-const dir = "/tmp"; // Default directory
-const dbfilename = "dump.rdb"; // Default DB file name
+const os = require("os");
+const path = require("path");
 
+// Dynamically generate the `dir` path for testing
+const dir = path.join(os.tmpdir(), `rdbfiles${Math.floor(Math.random() * 10000000000)}`);
+const dbfilename = "dump.rdb";
 
 
 // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -86,7 +89,7 @@ connection.on('data',(data)=>{ // handeling incoming data
                 else if(commands[i+4]==='dbfilename')
                 {
                     //const val=dbfilename;
-                    const response = `*2\r\n$10\r\ndbfilename\r\n$${dir.length}\r\n${dir}\r\n`;
+                    const response = `*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`;
                     connection.write(response);
                 }
             }
