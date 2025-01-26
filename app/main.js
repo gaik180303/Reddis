@@ -2,25 +2,8 @@ const net = require("net");
 const os = require("os");
 const path = require("path");
 
-// Predefined directory and filename for test cases
-const dir = "/tmp/redis-test-files";
-const dbfilename = "dump.rdb";
-
-// Ensure directory exists
-// if (!fs.existsSync(dir)) {
-//     fs.mkdirSync(dir, { recursive: true });
-// }
-
-
-// You can use print statements as follows for debugging, they'll be visible when running tests.
-//console.log("Logs from your program will appear here!");
-//const server = net.createServer((connection) => {
-// Handle connection\
-// connection.write(`+PONG\r\n`);
-//   });
-// Uncomment this block to pass the first stage
-
-
+// Read directory and filename from command-line arguments
+const [,, dir = '/tmp/redis-test-files', dbfilename = 'dump.rdb'] = process.argv;
 
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
