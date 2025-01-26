@@ -62,10 +62,24 @@ connection.on('data',(data)=>{ // handeling incoming data
                         connection.write(`$${str.value.length}\r\n${str.value}\r\n`);
                     }
                 }
-                else {
+                else 
+                {
                     connection.write("$-1\r\n");  // nil response in Redis protocol
                   }
                 
+            }
+            else if(command==='CONFIG' && commands[i+2]==='GET')
+            {
+                if(commands[i+4]==='dir')
+                {
+                    const response = `*2\r\n$3\r\ndir\r\n$${commands[i+4].length}\r\n${commands[i+4]}\r\n`;
+                    connection.write(response);
+                }
+                else if(commands[i+4]==='dbfilename')
+                {
+                    const response = `*2\r\n$10\r\ndbfilename\r\n$${commands[i+4].length}\r\n${commands[i+4]}\r\n`;
+                    connection.write(response);
+                }
             }
     }
     
