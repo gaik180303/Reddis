@@ -98,7 +98,7 @@ connection.on('data',(data)=>{ // handeling incoming data
                         connection.write(`*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`);
                         }
                     }
-                    i++;
+                    i+=2;
                 }
     }
     
