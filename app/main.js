@@ -1,10 +1,15 @@
-const net = require("net"); // for creating the tcp server
+const net = require("net");
 const os = require("os");
 const path = require("path");
+const fs = require("fs");
 
-// Dynamically generate the `dir` path for testing
-const dir = path.join(os.tmpdir(), `rdbfiles${Math.floor(Math.random() * 10000000000)}`);
-const dbfilename = "dump.rdb";
+let dir = process.env.TEST_DIR || path.join(os.tmpdir(), `rdbfiles${Math.floor(Math.random() * 10000000000)}`);
+let dbfilename = process.env.TEST_FILENAME || "dump.rdb";
+
+// Ensure directory exists
+if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+}
 
 
 // You can use print statements as follows for debugging, they'll be visible when running tests.
