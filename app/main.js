@@ -1,6 +1,7 @@
 const net = require("net");
 const os = require("os");
 const path = require("path");
+const { parseRDBFile } = require("./rdbParser");
 
 function parseArgs(argv) {
     const args = {};
@@ -24,9 +25,15 @@ const args = parseArgs(process.argv);
 const dir = args.dir || '/tmp/redis-test-files';
 const dbfilename = args.dbfilename || 'dump.rdb';
 
+const filePath = path.join(dir, dbfilename);
+const keys = parseRDBFile(filePath);
+
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
 const myMap=new Map();
+
+keys.forEach((key) => myMap.set(key, { value: "dummy-value",expiryTime:null }));
+
 connection.on('data',(data)=>{ // handeling incoming data
     const commands = Buffer.from(data).toString().split("\r\n"); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
     //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
@@ -85,21 +92,21 @@ connection.on('data',(data)=>{ // handeling incoming data
                   }
                 
             }
-            else if (command === 'CONFIG' && i+2 < commands.length && commands[i+2] === 'GET') 
-                {
-                if (i+4 < commands.length) 
-                    {
-                    if (commands[i+4] === 'dir') 
-                        {
-                        connection.write(`*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`);
-                        }
-                    else if (commands[i+4] === 'dbfilename') 
-                        {
-                        connection.write(`*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`);
-                        }
-                    }
-                    i+=2;
+            else if(command=== "KEYS" && commands[i+2] === "*") {
+                const resp=`*${myMap.size}\r\n` + [...myMap.keys()].map((key) => `$${key.length}\r\n${key}\r\n`).join("");
+                connection.write(resp);
+            }
+            else if (command === 'CONFIG' && commands[i+2] === 'GET') {
+                const parameter = commands[i+4];
+                if (parameter === 'dir') {
+                    connection.write(`*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`);
+                } else if (parameter === 'dbfilename') {
+                    connection.write(`*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`);
+                } else {
+                    connection.write("$-1\r\n");  // Properly handle unknown config parameters
                 }
+                i += 2;  // Skip processed arguments
+            }
     }
     
    
