@@ -2,6 +2,7 @@ const net = require("net");
 const os = require("os");
 const path = require("path");
 const { parseRDBFile } = require("./rdbParser");
+const { connect } = require("http2");
 
 function parseArgs(argv) {
     const args = {};
@@ -28,6 +29,75 @@ const dbfilename = args.dbfilename || 'dump.rdb';
 const filePath = path.join(dir, dbfilename);
 const keys = parseRDBFile(filePath);
 
+// RESP Protocol Parser
+const parseRESP = (buffer) => {
+    let offset = 0;
+    const commands = [];
+    
+    while (offset < buffer.length) {
+        const type = buffer[offset++];
+        
+        switch (type) {
+            case 42: // '*' - Array
+                const numArgs = parseInt(readUntilCRLF(buffer, offset));
+                offset += getOffsetToCRLF(buffer, offset) + 2;
+                
+                const args = [];
+                for (let i = 0; i < numArgs; i++) {
+                    if (buffer[offset++] !== 36) {
+                        throw new Error('Invalid RESP format: expected $ for bulk string');
+                    }
+                    
+                    const strLen = parseInt(readUntilCRLF(buffer, offset));
+                    offset += getOffsetToCRLF(buffer, offset) + 2;
+                    
+                    const str = buffer.slice(offset, offset + strLen).toString();
+                    offset += strLen + 2;
+                    args.push(str);
+                }
+                commands.push(args);
+                break;
+                
+            case 43: // '+' - Simple String
+            case 45: // '-' - Error
+            case 58: // ':' - Integer
+                const value = readUntilCRLF(buffer, offset);
+                offset += getOffsetToCRLF(buffer, offset) + 2;
+                commands.push([value]);
+                break;
+                
+            case 36: // '$' - Bulk String
+                const length = parseInt(readUntilCRLF(buffer, offset));
+                offset += getOffsetToCRLF(buffer, offset) + 2;
+                if (length === -1) {
+                    commands.push([null]);
+                } else {
+                    const str = buffer.slice(offset, offset + length).toString();
+                    offset += length + 2;
+                    commands.push([str]);
+                }
+                break;
+        }
+    }
+    return commands;
+};
+
+function readUntilCRLF(buffer, offset) {
+    let end = offset;
+    while (end < buffer.length && buffer[end] !== 13) {
+        end++;
+    }
+    return buffer.slice(offset, end).toString();
+}
+
+function getOffsetToCRLF(buffer, offset) {
+    let end = offset;
+    while (end < buffer.length && buffer[end] !== 13) {
+        end++;
+    }
+    return end - offset;
+}
+
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
 const myMap=new Map();
@@ -35,85 +105,192 @@ const myMap=new Map();
 keys.forEach((key) => myMap.set(key, { value: "dummy-value",expiryTime:null }));
 
 connection.on('data',(data)=>{ // handeling incoming data
-    const commands = Buffer.from(data).toString().split("\r\n"); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
-    //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
+    // const commands = Buffer.from(data).toString().split("\r\n"); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
+    // //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
     
     
 
-    for(let i=0;i<commands.length;i++)
-    {
-        const command=commands[i].toUpperCase();
-        if(command==='PING')
-        {
-            connection.write('+PONG\r\n');
-        }
-        else if(command==='ECHO')
-        {
-            const argi=commands[i+2];
-            if(argi)
-            {
-               // const resp=`$${argi.length}\r\n${argi}\r\n`;
-               connection.write(`$${argi.length}\r\n${argi}\r\n`);
-                //i++;
-            }
+    // for(let i=0;i<commands.length;i++)
+    // {
+    //     const command=commands[i].toUpperCase();
+    //     if(command==='PING')
+    //     {
+    //         connection.write('+PONG\r\n');
+    //     }
+    //     else if(command==='ECHO')
+    //     {
+    //         const argi=commands[i+2];
+    //         if(argi)
+    //         {
+    //            // const resp=`$${argi.length}\r\n${argi}\r\n`;
+    //            connection.write(`$${argi.length}\r\n${argi}\r\n`);
+    //             //i++;
+    //         }
            
-            else{
-                connection.write('-Error: Missing argument for ECHO\r\n');
-            }
-            //i++;
+    //         else{
+    //             connection.write('-Error: Missing argument for ECHO\r\n');
+    //         }
+    //         //i++;
 
-        }
-        else if(command==='SET')
-            {
-                let expiry=null;
-                expiry=parseInt(commands[i+8],10);
+    //     }
+    //     else if(command==='SET')
+    //         {
+    //             let expiry=null;
+    //             expiry=parseInt(commands[i+8],10);
                 
-                myMap.set(commands[i+2],{value: commands[i+4], expiryTime:expiry?Date.now()+expiry:null});
-                connection.write('+OK\r\n');
-                i++;
-            }
-        else if(command==='GET')
+    //             myMap.set(commands[i+2],{value: commands[i+4], expiryTime:expiry?Date.now()+expiry:null});
+    //             connection.write('+OK\r\n');
+    //             i++;
+    //         }
+    //     else if(command==='GET')
+    //         {
+    //             const str=myMap.get(commands[i+2]);
+    //             if(str)
+    //             {
+    //                 if(str.expiryTime && Date.now()>str.expiryTime)
+    //                 {
+    //                     myMap.delete(commands[i+2]);
+    //                     connection.write('$-1\r\n');
+    //                 }
+    //                 else{
+    //                     connection.write(`$${str.value.length}\r\n${str.value}\r\n`);
+    //                 }
+    //             }
+    //             else 
+    //             {
+    //                 connection.write("$-1\r\n");  // nil response in Redis protocol
+    //               }
+                
+    //         }
+    //         else if(command=== "KEYS" && commands[i+2] === "*") {
+                
+    //             const keys = [...myMap.keys()];
+    //             const resp = `*${keys.length}\r\n` + keys.map((key) => `$${Buffer.byteLength(key, "utf-8")}\r\n${key}\r\n`).join("");
+    //             connection.write(resp);
+    //         }
+    //         else if (command === 'CONFIG' && commands[i+2] === 'GET') {
+    //             const parameter = commands[i+4];
+    //             if (parameter === 'dir') {
+    //                 connection.write(`*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`);
+    //             } else if (parameter === 'dbfilename') {
+    //                 connection.write(`*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`);
+    //             } else {
+    //                 connection.write("$-1\r\n");  // Properly handle unknown config parameters
+    //             }
+    //             i += 2;  // Skip processed arguments
+    //         }
+    // }
+
+    try{
+        const commands=parseRESP(data);
+
+        for(const command of commands)
+        {
+            const [cmd, ...args]=command;
+
+            switch(cmd.toUpperCase())
             {
-                const str=myMap.get(commands[i+2]);
-                if(str)
-                {
-                    if(str.expiryTime && Date.now()>str.expiryTime)
+                case 'PING':
+                    connection.write('+PONG\r\n');
+                    break;
+                    
+                case 'ECHO':
+                    if(args[0])
                     {
-                        myMap.delete(commands[i+2]);
-                        connection.write('$-1\r\n');
+                        connection.write(`$${args[0].length}\r\n${args[0]}\r\n`);   
+
                     }
                     else{
-                        connection.write(`$${str.value.length}\r\n${str.value}\r\n`);
+                        connection.write('-Error: Missing argument for ECHO\r\n');
+                    }
+                    break;
+                
+                case 'SET':
+                    let key = args[0];
+                    let value = args[1];
+                    let expiry=null;    
+
+                    for(let i=2;i<args.length;i++)
+                    {
+                        if(args[i])
+                        {
+                            if(args[i].toUpperCase()==='EX')
+                            {
+                                expiry=parseInt(args[i+1],10)*1000;
+                            }
+                            else if(args[i].toUpperCase()==='PX')
+                            {
+                                expiry=parseInt(args[i+1],10);
+                            }
+                        }
+                    }
+
+                    myMap.set(key,{
+                        
+                            value:value,
+                            expiryTime:expiry?Date.now()+expiry:null
+                        
+                        });
+                        connection.write('+OK\r\n');
+                        break;
+
+                    case 'GET':
+                        const keyData=myMap.get(args[0]);
+                        if(keyData)
+                        {
+                            if(keyData.expiryTime && Date.now()>keyData.expiryTime)
+                            {
+                                myMap.delete(args[0]);
+                                connection.write('$-1\r\n');
+                            }
+                            else
+                            {
+                                connection.write(`$${keyData.value.length}\r\n${keyData.value}\r\n`);
+                            }
+                            
+                        }
+                        else{
+                            connection.write('$-1\r\n');
+                        }
+                        break;
+
+                        case 'KEYS':
+                            if (args[0] === '*') {
+                                const validKeys = [...myMap.entries()]
+                                    .filter(([_, value]) => !value.expiryTime || value.expiryTime > Date.now())
+                                    .map(([key, _]) => key);
+                                    
+                                const resp = `*${validKeys.length}\r\n` + 
+                                    validKeys.map(key => `$${Buffer.byteLength(key, "utf-8")}\r\n${key}\r\n`).join("");
+                                connection.write(resp);
+                            }
+                            break;
+
+                            case 'CONFIG':
+                        if (args[0] === 'GET') {
+                            const parameter = args[1];
+                            if (parameter === 'dir') {
+                                connection.write(`*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`);
+                            } else if (parameter === 'dbfilename') {
+                                connection.write(`*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`);
+                            } else {
+                                connection.write('$-1\r\n');
+                            }
+                        }
+                        break;
+                        default:
+                        connection.write('-ERR unknown command\r\n');
                     }
                 }
-                else 
-                {
-                    connection.write("$-1\r\n");  // nil response in Redis protocol
-                  }
-                
+            } catch (error) {
+                console.error('Error processing command:', error);
+                connection.write('-ERR internal server error\r\n');
             }
-            else if(command=== "KEYS" && commands[i+2] === "*") {
-                
-                const keys = [...myMap.keys()];
-                const resp = `*${keys.length}\r\n` + keys.map((key) => `$${Buffer.byteLength(key, "utf-8")}\r\n${key}\r\n`).join("");
-                connection.write(resp);
-            }
-            else if (command === 'CONFIG' && commands[i+2] === 'GET') {
-                const parameter = commands[i+4];
-                if (parameter === 'dir') {
-                    connection.write(`*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`);
-                } else if (parameter === 'dbfilename') {
-                    connection.write(`*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`);
-                } else {
-                    connection.write("$-1\r\n");  // Properly handle unknown config parameters
-                }
-                i += 2;  // Skip processed arguments
-            }
-    }
+        });
     
-   
-
-});
+        connection.on('error', (err) => {
+            console.error('Connection error:', err);
+        });
 connection.on("end",()=>console.log("Client disconnected")); // connection is  asocket class which represent the connection between the server and client
 });
 
