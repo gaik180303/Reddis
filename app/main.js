@@ -93,7 +93,9 @@ connection.on('data',(data)=>{ // handeling incoming data
                 
             }
             else if(command=== "KEYS" && commands[i+2] === "*") {
-                const resp=`*${myMap.size}\r\n` + [...myMap.keys()].map((key) => `$${key.length}\r\n${key}\r\n`).join("");
+                
+                const keys = [...myMap.keys()];
+                const resp = `*${keys.length}\r\n` + keys.map((key) => `$${Buffer.byteLength(key, "utf-8")}\r\n${key}\r\n`).join("");
                 connection.write(resp);
             }
             else if (command === 'CONFIG' && commands[i+2] === 'GET') {
