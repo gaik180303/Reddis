@@ -102,84 +102,15 @@ const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
 const myMap=new Map();
 
-keys.forEach((key) => myMap.set(key, { value: "dummy-value",expiryTime:null }));
+//keys.forEach((key) => myMap.set(key, { value: "dummy-value",expiryTime:null }));
+
+const keyValueMap = parseRDBFile(filePath);
+keyValueMap.forEach((value, key) => {
+    myMap.set(key, { value: value, expiryTime: null });
+});
 
 connection.on('data',(data)=>{ // handeling incoming data
-    // const commands = Buffer.from(data).toString().split("\r\n"); //Clients send data in the RESP (Redis Serialization Protocol) format, where commands are delimited by \r\n.
-    // //Splits the string into an array of commands, where each command is separated by \r\n (carriage return and newline).
     
-    
-
-    // for(let i=0;i<commands.length;i++)
-    // {
-    //     const command=commands[i].toUpperCase();
-    //     if(command==='PING')
-    //     {
-    //         connection.write('+PONG\r\n');
-    //     }
-    //     else if(command==='ECHO')
-    //     {
-    //         const argi=commands[i+2];
-    //         if(argi)
-    //         {
-    //            // const resp=`$${argi.length}\r\n${argi}\r\n`;
-    //            connection.write(`$${argi.length}\r\n${argi}\r\n`);
-    //             //i++;
-    //         }
-           
-    //         else{
-    //             connection.write('-Error: Missing argument for ECHO\r\n');
-    //         }
-    //         //i++;
-
-    //     }
-    //     else if(command==='SET')
-    //         {
-    //             let expiry=null;
-    //             expiry=parseInt(commands[i+8],10);
-                
-    //             myMap.set(commands[i+2],{value: commands[i+4], expiryTime:expiry?Date.now()+expiry:null});
-    //             connection.write('+OK\r\n');
-    //             i++;
-    //         }
-    //     else if(command==='GET')
-    //         {
-    //             const str=myMap.get(commands[i+2]);
-    //             if(str)
-    //             {
-    //                 if(str.expiryTime && Date.now()>str.expiryTime)
-    //                 {
-    //                     myMap.delete(commands[i+2]);
-    //                     connection.write('$-1\r\n');
-    //                 }
-    //                 else{
-    //                     connection.write(`$${str.value.length}\r\n${str.value}\r\n`);
-    //                 }
-    //             }
-    //             else 
-    //             {
-    //                 connection.write("$-1\r\n");  // nil response in Redis protocol
-    //               }
-                
-    //         }
-    //         else if(command=== "KEYS" && commands[i+2] === "*") {
-                
-    //             const keys = [...myMap.keys()];
-    //             const resp = `*${keys.length}\r\n` + keys.map((key) => `$${Buffer.byteLength(key, "utf-8")}\r\n${key}\r\n`).join("");
-    //             connection.write(resp);
-    //         }
-    //         else if (command === 'CONFIG' && commands[i+2] === 'GET') {
-    //             const parameter = commands[i+4];
-    //             if (parameter === 'dir') {
-    //                 connection.write(`*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`);
-    //             } else if (parameter === 'dbfilename') {
-    //                 connection.write(`*2\r\n$10\r\ndbfilename\r\n$${dbfilename.length}\r\n${dbfilename}\r\n`);
-    //             } else {
-    //                 connection.write("$-1\r\n");  // Properly handle unknown config parameters
-    //             }
-    //             i += 2;  // Skip processed arguments
-    //         }
-    // }
 
     try{
         const commands=parseRESP(data);

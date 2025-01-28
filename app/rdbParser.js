@@ -1,7 +1,7 @@
 const fs = require("fs");
 
 function parseRDBFile(filePath) {
-    const keys = [];
+    const keyValueMap = new Map();
     try {
         const buffer = fs.readFileSync(filePath);
         
@@ -44,18 +44,37 @@ function parseRDBFile(filePath) {
                 const key = buffer.slice(offset, offset + keyLength.value).toString();
                 offset += keyLength.value;
 
-                // Skip value length
-                const valueLength = readLength(buffer, offset);
-                offset += valueLength.bytesRead + valueLength.value;
+                
+                const valueType = buffer[offset];
+                offset++;
 
-                keys.push(key);
+                // Handle length-prefixed string value
+                if (valueType === 0) { // String encoding
+                    const valueLength = readLength(buffer, offset);
+                    offset += valueLength.bytesRead;
+                    const value = buffer.slice(offset, offset + valueLength.value).toString();
+                    offset += valueLength.value;
+                    
+                    keyValueMap.set(key, value);
+                } else {
+                    // Skip other value types for now
+                    const valueLength = readLength(buffer, offset);
+                    offset += valueLength.bytesRead + valueLength.value;
+                
+                }
+                
+                // Skip value length
+                // const valueLength = readLength(buffer, offset);
+                // offset += valueLength.bytesRead + valueLength.value;
+
+                // keys.push(key);
             }
         }
     } catch (err) {
         console.error('Error parsing RDB file:', err);
-        return [];
+        return new Map();
     }
-    return keys;
+    return keyValueMap;
 }
 
 function readLength(buffer, offset) {
