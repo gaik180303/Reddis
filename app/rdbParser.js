@@ -38,7 +38,7 @@ function parseRDBFile(filePath) {
             }
 
             // Key-value pair
-            if (type === 0) {
+            // if (type === 0) {
                 // Read key
                 const keyLength = readLength(buffer, offset);
                 offset += keyLength.bytesRead;
@@ -49,45 +49,53 @@ function parseRDBFile(filePath) {
                 const valueType = buffer[offset];
                 offset++;
 
-                let value;
+                if (valueType === 0) {  // String encoding
+                    const valueLength = readLength(buffer, offset);
+                    offset += valueLength.bytesRead;
+                    const value = buffer.slice(offset, offset + valueLength.value).toString();
+                    offset += valueLength.value;
+                    keyValueMap.set(key, value);
+
+                //let value;
 
 
                 // Handle length-prefixed string value
-                switch(valueType)
-                {
-                    case 0:
-                        const valueLength = readLength(buffer, offset);
-                        offset += valueLength.bytesRead;
-                        value = buffer.slice(offset, offset + valueLength.value).toString();
-                        offset += valueLength.value;    
-                        break;
+        //         switch(valueType)
+        //         {
+        //             case 0:
+        //                 const valueLength = readLength(buffer, offset);
+        //                 offset += valueLength.bytesRead;
+        //                 value = buffer.slice(offset, offset + valueLength.value).toString();
+        //                 offset += valueLength.value;    
+        //                 break;
 
-                    case 1:
-                        value = buffer[offset];
-                        offset++;
-                        break;
+        //             case 1:
+        //                 value = buffer[offset];
+        //                 offset++;
+        //                 break;
                     
-                    case 2:
-                        value = buffer.readInt16LE(offset);
-                        offset += 2;
-                        break;
-                    case 3:
-                        value = ((buffer[offset] << 24) | (buffer[offset + 1] << 16) | 
-                        (buffer[offset + 2] << 8) | buffer[offset + 3]).toString();
-                        offset += 4;
-                        break;
+        //             case 2:
+        //                 value = buffer.readInt16LE(offset);
+        //                 offset += 2;
+        //                 break;
+        //             case 3:
+        //                 value = ((buffer[offset] << 24) | (buffer[offset + 1] << 16) | 
+        //                 (buffer[offset + 2] << 8) | buffer[offset + 3]).toString();
+        //                 offset += 4;
+        //                 break;
 
-                        default:
-                            const skipLength = readLength(buffer, offset);
-                            offset += skipLength.bytesRead + skipLength.value;
-                            continue;
-                }
-                keyValueMap.set(key, value);
+        //                 default:
+        //                     const skipLength = readLength(buffer, offset);
+        //                     offset += skipLength.bytesRead + skipLength.value;
+        //                     continue;
+        //         }
+        //         keyValueMap.set(key, value);
             }
         }
-    } catch (err) {
+    } 
+    catch (err) {
         console.error('Error parsing RDB file:', err);
-        return new Map();
+        throw err;
     }
     return keyValueMap;
 }
