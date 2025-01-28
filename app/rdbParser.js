@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { off } = require("process");
 
 function parseRDBFile(filePath) {
     const keyValueMap = new Map();
@@ -48,26 +49,40 @@ function parseRDBFile(filePath) {
                 const valueType = buffer[offset];
                 offset++;
 
-                // Handle length-prefixed string value
-                if (valueType === 0) { // String encoding
-                    const valueLength = readLength(buffer, offset);
-                    offset += valueLength.bytesRead;
-                    const value = buffer.slice(offset, offset + valueLength.value).toString();
-                    offset += valueLength.value;
-                    
-                    keyValueMap.set(key, value);
-                } else {
-                    // Skip other value types for now
-                    const valueLength = readLength(buffer, offset);
-                    offset += valueLength.bytesRead + valueLength.value;
-                
-                }
-                
-                // Skip value length
-                // const valueLength = readLength(buffer, offset);
-                // offset += valueLength.bytesRead + valueLength.value;
+                let value;
 
-                // keys.push(key);
+
+                // Handle length-prefixed string value
+                switch(valueType)
+                {
+                    case 0:
+                        const valueLength = readLength(buffer, offset);
+                        offset += valueLength.bytesRead;
+                        value = buffer.slice(offset, offset + valueLength.value).toString();
+                        offset += valueLength.value;    
+                        break;
+
+                    case 1:
+                        value = buffer[offset];
+                        offset++;
+                        break;
+                    
+                    case 2:
+                        value = buffer.readInt16LE(offset);
+                        offset += 2;
+                        break;
+                    case 3:
+                        value = ((buffer[offset] << 24) | (buffer[offset + 1] << 16) | 
+                        (buffer[offset + 2] << 8) | buffer[offset + 3]).toString();
+                        offset += 4;
+                        break;
+
+                        default:
+                            const skipLength = readLength(buffer, offset);
+                            offset += skipLength.bytesRead + skipLength.value;
+                            continue;
+                }
+                keyValueMap.set(key, value);
             }
         }
     } catch (err) {
