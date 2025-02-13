@@ -169,47 +169,67 @@ function parseRDBFile(filePath) {
                 continue;
             }
 
-            // Key-value pair
+            // Read key
             const keyLength = readLength(buffer, offset);
             offset += keyLength.bytesRead;
             const key = buffer.slice(offset, offset + keyLength.value).toString();
             offset += keyLength.value;
 
+            // Read value type
             const valueType = buffer[offset];
             offset++;
 
-            // Handle different value types
-            switch (valueType) {
-                case 0: // String
-                    const valueLength = readLength(buffer, offset);
-                    offset += valueLength.bytesRead;
-                    const value = buffer.slice(offset, offset + valueLength.value).toString();
-                    offset += valueLength.value;
-                    keyValueMap.set(key, value);
-                    console.log(`Parsed string key-value pair: ${key} => ${value}`);
+            let value;
+            switch(valueType) {
+                case 0: // String encoding
+                    const strLength = readLength(buffer, offset);
+                    offset += strLength.bytesRead;
+                    value = buffer.slice(offset, offset + strLength.value).toString();
+                    offset += strLength.value;
                     break;
 
-                case 9: // List
-                case 2: // Set
+                case 1: // Integer 8
+                    value = buffer[offset].toString();
+                    offset++;
+                    break;
+                
+                case 2: // Integer 16
+                    value = buffer.readInt16LE(offset).toString();
+                    offset += 2;
+                    break;
+
+                case 3: // Integer 32
+                    value = ((buffer[offset] << 24) | 
+                            (buffer[offset + 1] << 16) | 
+                            (buffer[offset + 2] << 8) | 
+                            buffer[offset + 3]).toString();
+                    offset += 4;
+                    break;
+
+                case 9: // List type
                     const listLength = readLength(buffer, offset);
                     offset += listLength.bytesRead;
-                    const listValue = [];
+                    const elements = [];
                     for (let i = 0; i < listLength.value; i++) {
-                        const elementLength = readLength(buffer, offset);
-                        offset += elementLength.bytesRead;
-                        const element = buffer.slice(offset, offset + elementLength.value).toString();
-                        offset += elementLength.value;
-                        listValue.push(element);
+                        const elemLength = readLength(buffer, offset);
+                        offset += elemLength.bytesRead;
+                        const element = buffer.slice(offset, offset + elemLength.value).toString();
+                        offset += elemLength.value;
+                        elements.push(element);
                     }
-                    keyValueMap.set(key, listValue.join(','));
-                    console.log(`Parsed list/set key-value pair: ${key} => ${listValue.join(',')}`);
+                    value = elements[0]; // Take first element for simple string response
                     break;
 
                 default:
-                    console.log(`Skipping unsupported value type: ${valueType}`);
-                    // Skip unknown value types
+                    console.log(`Skipping unknown value type: ${valueType}`);
                     const skipLength = readLength(buffer, offset);
                     offset += skipLength.bytesRead + skipLength.value;
+                    continue;
+            }
+
+            if (value !== undefined) {
+                console.log(`Storing key-value pair: ${key} => ${value}`);
+                keyValueMap.set(key, value);
             }
         }
     } catch (err) {
@@ -221,29 +241,3 @@ function parseRDBFile(filePath) {
     return keyValueMap;
 }
 
-function readLength(buffer, offset) {
-    let byte = buffer[offset];
-    let type = (byte & 0xC0) >> 6; // Get first 2 bits
-    
-    if (type === 0) {
-        // Length in this byte
-        return { value: byte & 0x3F, bytesRead: 1 };
-    } else if (type === 1) {
-        // Length in next byte
-        return { value: ((byte & 0x3F) << 8) | buffer[offset + 1], bytesRead: 2 };
-    } else if (type === 2) {
-        // Length in next 4 bytes
-        return {
-            value: ((byte & 0x3F) << 24) |
-                  (buffer[offset + 1] << 16) |
-                  (buffer[offset + 2] << 8) |
-                  buffer[offset + 3],
-            bytesRead: 4
-        };
-    } else {
-        // Special encoding
-        return { value: byte & 0x3F, bytesRead: 1 };
-    }
-}
-
-module.exports = { parseRDBFile };
