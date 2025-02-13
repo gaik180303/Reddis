@@ -384,6 +384,7 @@ const server = net.createServer((connection) => { // new tcp server
             process.exit(1);
         }
         keyValueMap.forEach((value, key) => {
+            console.log(`Key ${key} has value ${value}`);
             myMap.set(key, { value: value, expiryTime: null });
         });
     } catch (err) {
