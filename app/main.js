@@ -392,6 +392,8 @@ const server = net.createServer((connection) => { // new tcp server
         process.exit(1);
     }
 
+    console.log('Contents of myMap:', Array.from(myMap.entries()));
+
     connection.on('data', (data) => { // handling incoming data
         try {
             const commands = parseRESP(data);
