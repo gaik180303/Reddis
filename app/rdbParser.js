@@ -131,8 +131,93 @@
 // module.exports = { parseRDBFile };
 
 
-module.exports = { 
-    parseRDBFile: parseRDBFile,
-    readLength: readLength 
-};
 
+
+
+
+const fs = require("fs");
+const { off } = require("process");
+
+function parseRDBFile(filePath) {
+    const keyValueMap = new Map();
+    try {
+        console.log(`Parsing RDB file: ${filePath}`);
+        const buffer = fs.readFileSync(filePath);
+        
+        // Validate header (REDIS + version)
+        const header = buffer.slice(0, 5).toString();
+        if (header !== 'REDIS') {
+            throw new Error("Invalid RDB file format");
+        }
+
+        let offset = 9; // Skip header and version
+
+        while (offset < buffer.length) {
+            const type = buffer[offset];
+            offset++;
+
+            // EOF marker
+            if (type === 0xFF) {
+                break;
+            }
+
+            // Skip auxiliary fields and other metadata
+            if (type === 0xFA || type === 0xFB || type === 0xFC || type === 0xFD) {
+                const length = readLength(buffer, offset);
+                offset += length.bytesRead + length.value;
+                continue;
+            }
+
+            // Database selector
+            if (type === 0xFE) {
+                offset += readLength(buffer, offset).bytesRead;
+                continue;
+            }
+
+            // Key-value pair
+            const keyLength = readLength(buffer, offset);
+            offset += keyLength.bytesRead;
+            const key = buffer.slice(offset, offset + keyLength.value).toString();
+            offset += keyLength.value;
+
+            const valueType = buffer[offset];
+            offset++;
+
+            let value;
+            if (valueType === 0) {  // String encoding
+                const valueLength = readLength(buffer, offset);
+                offset += valueLength.bytesRead;
+                value = buffer.slice(offset, offset + valueLength.value).toString();
+                offset += valueLength.value;
+                keyValueMap.set(key, value);
+                console.log(`Parsed key-value pair: ${key} => ${value}`);
+            } else {
+                // Skip other value types for now
+                const skipLength = readLength(buffer, offset);
+                offset += skipLength.bytesRead + skipLength.value;
+                continue;
+            }
+        }
+    } catch (err) {
+        console.error('Error parsing RDB file:', err);
+        throw err;
+    }
+    
+    return keyValueMap;
+}
+
+// Add a new function to format response in RESP format
+function formatRespString(value) {
+    if (value === null || value === undefined) {
+        return "$-1\r\n";  // Null bulk string
+    }
+    return `$${value.length}\r\n${value}\r\n`;
+}
+
+// Add a function to get value by key
+function getValue(keyValueMap, key) {
+    const value = keyValueMap.get(key);
+    return formatRespString(value);
+}
+
+module.exports = { parseRDBFile, getValue };
