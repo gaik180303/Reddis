@@ -4,6 +4,17 @@ const path = require("path");
 const { parseRDBFile } = require("./rdbParser");
 const { connect } = require("http2");
 
+const RESP={
+    formatBulkingString:(str){
+        if(str===null) return "$-1\r\n";
+        return `$${Buffer.byteLength(str)}\r\n${str}\r\n`;
+    },
+    formatError(msg)
+    {
+        return `-ERR ${msg}\r\n`;
+    }
+}
+
 function parseArgs(argv) {
     const args = {};
     for (let i = 0; i < argv.length; i++) {
@@ -102,11 +113,21 @@ const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
 const myMap=new Map();
 //keys.forEach((key) => myMap.set(key, { value: "dummy-value",expiryTime:null }));
-
+try {
 const keyValueMap = parseRDBFile(filePath);
+if(!keyValueMap)
+{
+    console.error('Error parsing RDB file:', err);
+    process.exit(1);
+}
 keyValueMap.forEach((value, key) => {
     myMap.set(key, { value: value, expiryTime: null });
+
 });
+} catch (err) {
+console.error('Error parsing RDB file:', err);
+process.exit(1);
+}
 
 connection.on('data',(data)=>{ // handeling incoming data
     
@@ -165,13 +186,21 @@ connection.on('data',(data)=>{ // handeling incoming data
                         break;
 
                     case 'GET':
+                        //let key = args[0];
+                        if(!args[0])
+                        {
+                            connection.write(RESP.formatError('wrong number of arguments for GET command'));
+                            break;
+                        }
                         const keyData=myMap.get(args[0]);
                         if(keyData)
                         {
                             if(keyData.expiryTime && Date.now()>keyData.expiryTime)
                             {
                                 myMap.delete(args[0]);
-                                connection.write('$-1\r\n');
+                                // connection.write('$-1\r\n');
+                                connection.write(RESP.formatBulkString(null));
+                                break;
                             }
                             else
                             {
