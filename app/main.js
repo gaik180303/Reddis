@@ -441,13 +441,16 @@ const server = net.createServer((connection) => { // new tcp server
                         const keyData = myMap.get(args[0]);
                         if (keyData) {
                             if (keyData.expiryTime && Date.now() > keyData.expiryTime) {
+                                console.log(`Key ${args[0]} has expired`);
                                 myMap.delete(args[0]);
                                 connection.write(RESP.formatBulkString(null));
                                 break;
                             } else {
+                                console.log(`Key ${args[0]} has value ${keyData.value}`);
                                 connection.write(`$${keyData.value.length}\r\n${keyData.value}\r\n`);
                             }
                         } else {
+                            console.log(`Key ${args[0]} not found`);
                             connection.write('$-1\r\n');
                         }
                         break;
