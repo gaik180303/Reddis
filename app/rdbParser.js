@@ -4,6 +4,7 @@ const { off } = require("process");
 function parseRDBFile(filePath) {
     const keyValueMap = new Map();
     try {
+        console.log(`Parsing RDB file: ${filePath}`);
         const buffer = fs.readFileSync(filePath);
         
         // Validate header (REDIS + version)
@@ -55,6 +56,7 @@ function parseRDBFile(filePath) {
                     const value = buffer.slice(offset, offset + valueLength.value).toString();
                     offset += valueLength.value;
                     keyValueMap.set(key, value);
+                    console.log(`Parsed key-value pair: ${key} => ${value}`);
 
                 //let value;
 
