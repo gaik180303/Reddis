@@ -263,100 +263,75 @@
 
 
 
+const net = require("net");
+const path = require("path");
+const { parseRDBFile } = require("./rdbParser");
 
+const RESP = {
+    formatBulkString: (str) => {
+        if(str === null) return "$-1\r\n";
+        return `$${Buffer.byteLength(str)}\r\n${str}\r\n`;
+    },
+    formatError: (msg) => {
+        return `-ERR ${msg}\r\n`;
+    }
+};
 
-const net = require('net');
-const { parseRDBFile } = require('./rdbParser');
-const path = require('path');
-
-let rdbFilePath = '';
-let keyValueMap = null;
-
-// Parse command line arguments
-function parseArgs() {
-    const args = process.argv.slice(2);
-    let dir = '.';
-    let dbfilename = '';
-
-    for (let i = 0; i < args.length; i += 2) {
-        if (args[i] === '--dir') {
-            dir = args[i + 1];
-        } else if (args[i] === '--dbfilename') {
-            dbfilename = args[i + 1];
+function parseArgs(argv) {
+    const args = {};
+    for (let i = 0; i < argv.length; i++) {
+        if (argv[i].startsWith('--')) {
+            const key = argv[i].slice(2);
+            const value = argv[i + 1];
+            if (value && !value.startsWith('--')) {
+                args[key] = value;
+                i++;
+            }
         }
     }
-
-    if (!dbfilename) {
-        console.error('Missing required --dbfilename argument');
-        process.exit(1);
-    }
-
-    return path.join(dir, dbfilename);
+    return args;
 }
 
-// Format response in RESP protocol format
-function formatRespString(value) {
-    if (value === null || value === undefined) {
-        return "$-1\r\n";  // Null bulk string
-    }
-    return `$${value.length}\r\n${value}\r\n`;
-}
+// Parse command-line arguments
+const args = parseArgs(process.argv);
 
-// Handle client commands
-function handleCommand(data, socket) {
-    const command = data.toString().trim();
-    const parts = command.split(' ');
+// Get directory and filename from parsed arguments
+const dir = args.dir || '.';
+const dbfilename = args.dbfilename;
+
+const filePath = path.join(dir, dbfilename);
+
+const server = net.createServer((connection) => {
+    const keyValueMap = parseRDBFile(filePath);
     
-    if (parts[0].toUpperCase() === 'GET') {
-        const key = parts[1].replace(/"/g, '');  // Remove quotes if present
-        const value = keyValueMap.get(key);
-        socket.write(formatRespString(value));
-    } else {
-        socket.write("-ERR unknown command\r\n");
-    }
-}
+    connection.on('data', (data) => {
+        try {
+            const command = data.toString().trim().split(' ');
+            const cmd = command[0].toUpperCase();
+            const key = command[1] ? command[1].replace(/^"(.*)"$/, '$1') : null;
 
-// Create and start the server
-function startServer() {
-    // Parse command line arguments and get RDB file path
-    rdbFilePath = parseArgs();
-    
-    // Load and parse the RDB file
-    try {
-        keyValueMap = parseRDBFile(rdbFilePath);
-    } catch (err) {
-        console.error('Failed to parse RDB file:', err);
-        process.exit(1);
-    }
-
-    // Create TCP server
-    const server = net.createServer((socket) => {
-        console.log('Client connected');
-
-        socket.on('data', (data) => {
-            handleCommand(data, socket);
-        });
-
-        socket.on('error', (err) => {
-            console.error('Socket error:', err);
-        });
-
-        socket.on('end', () => {
-            console.log('Client disconnected');
-        });
+            if (cmd === 'GET') {
+                if (!key) {
+                    connection.write(RESP.formatError('wrong number of arguments for GET command'));
+                    return;
+                }
+                const value = keyValueMap.get(key);
+                connection.write(RESP.formatBulkString(value));
+            } else {
+                connection.write(RESP.formatError('unknown command'));
+            }
+        } catch (error) {
+            console.error('Error processing command:', error);
+            connection.write(RESP.formatError('internal server error'));
+        }
     });
 
-    // Start listening on port 6379 (default Redis port)
-    const PORT = 6379;
-    server.listen(PORT, () => {
-        console.log(`Server listening on port ${PORT}`);
+    connection.on('error', (err) => {
+        console.error('Connection error:', err);
     });
 
-    server.on('error', (err) => {
-        console.error('Server error:', err);
-        process.exit(1);
-    });
-}
+    connection.on("end", () => console.log("Client disconnected"));
+});
 
-// Start the server
-startServer();
+server.listen(6379, "127.0.0.1");
+

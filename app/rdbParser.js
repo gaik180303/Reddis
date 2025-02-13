@@ -134,9 +134,32 @@
 
 
 
-
 const fs = require("fs");
-const { off } = require("process");
+
+function readLength(buffer, offset) {
+    let byte = buffer[offset];
+    let type = (byte & 0xC0) >> 6; // Get first 2 bits
+    
+    if (type === 0) {
+        // Length in this byte
+        return { value: byte & 0x3F, bytesRead: 1 };
+    } else if (type === 1) {
+        // Length in next byte
+        return { value: ((byte & 0x3F) << 8) | buffer[offset + 1], bytesRead: 2 };
+    } else if (type === 2) {
+        // Length in next 4 bytes
+        return {
+            value: ((byte & 0x3F) << 24) |
+                  (buffer[offset + 1] << 16) |
+                  (buffer[offset + 2] << 8) |
+                  buffer[offset + 3],
+            bytesRead: 4
+        };
+    } else {
+        // Special encoding
+        return { value: byte & 0x3F, bytesRead: 1 };
+    }
+}
 
 function parseRDBFile(filePath) {
     const keyValueMap = new Map();
@@ -183,11 +206,10 @@ function parseRDBFile(filePath) {
             const valueType = buffer[offset];
             offset++;
 
-            let value;
             if (valueType === 0) {  // String encoding
                 const valueLength = readLength(buffer, offset);
                 offset += valueLength.bytesRead;
-                value = buffer.slice(offset, offset + valueLength.value).toString();
+                const value = buffer.slice(offset, offset + valueLength.value).toString();
                 offset += valueLength.value;
                 keyValueMap.set(key, value);
                 console.log(`Parsed key-value pair: ${key} => ${value}`);
@@ -206,15 +228,13 @@ function parseRDBFile(filePath) {
     return keyValueMap;
 }
 
-// Add a new function to format response in RESP format
 function formatRespString(value) {
     if (value === null || value === undefined) {
-        return "$-1\r\n";  // Null bulk string
+        return "$-1\r\n";
     }
     return `$${value.length}\r\n${value}\r\n`;
 }
 
-// Add a function to get value by key
 function getValue(keyValueMap, key) {
     const value = keyValueMap.get(key);
     return formatRespString(value);
