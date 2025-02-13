@@ -97,6 +97,7 @@ function parseRDBFile(filePath) {
         console.error('Error parsing RDB file:', err);
         throw err;
     }
+    console.log('Parsed key-value pairs:',Array.from(keyValueMap.entries()));
     return keyValueMap;
 }
 
