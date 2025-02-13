@@ -444,7 +444,7 @@ const server = net.createServer((connection) => { // new tcp server
                                 console.log(`Key ${args[0]} has expired`);
                                 myMap.delete(args[0]);
                                 connection.write(RESP.formatBulkString(null));
-                                break;
+                               // break;
                             } else {
                                 console.log(`Key ${args[0]} has value ${keyData.value}`);
                                 connection.write(`$${keyData.value.length}\r\n${keyData.value}\r\n`);
