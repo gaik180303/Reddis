@@ -165,40 +165,51 @@ function parseRDBFile(filePath) {
 
             // Database selector
             if (type === 0xFE) {
-                const length = readLength(buffer, offset);
-                offset += length.bytesRead;
+                offset += readLength(buffer, offset).bytesRead;
                 continue;
             }
 
-            // Key-value pair (type === 0)
-            if (type === 0) {
-                // Read key
-                const keyLength = readLength(buffer, offset);
-                offset += keyLength.bytesRead;
-                const key = buffer.slice(offset, offset + keyLength.value).toString();
-                offset += keyLength.value;
+            // Key-value pair
+            const keyLength = readLength(buffer, offset);
+            offset += keyLength.bytesRead;
+            const key = buffer.slice(offset, offset + keyLength.value).toString();
+            offset += keyLength.value;
 
-                // Read value type
-                const valueType = buffer[offset];
-                offset++;
+            const valueType = buffer[offset];
+            offset++;
 
-                let value;
-                
-                // Handle string encoding (type 0)
-                if (valueType === 0) {
+            // Handle different value types
+            switch (valueType) {
+                case 0: // String
                     const valueLength = readLength(buffer, offset);
                     offset += valueLength.bytesRead;
-                    value = buffer.slice(offset, offset + valueLength.value).toString();
+                    const value = buffer.slice(offset, offset + valueLength.value).toString();
                     offset += valueLength.value;
-                    
                     keyValueMap.set(key, value);
-                    console.log(`Parsed key-value pair: ${key} => ${value}`);
-                } else {
-                    console.log(`Skipping non-string value type: ${valueType}`);
-                    // Skip other value types for now
+                    console.log(`Parsed string key-value pair: ${key} => ${value}`);
+                    break;
+
+                case 9: // List
+                case 2: // Set
+                    const listLength = readLength(buffer, offset);
+                    offset += listLength.bytesRead;
+                    const listValue = [];
+                    for (let i = 0; i < listLength.value; i++) {
+                        const elementLength = readLength(buffer, offset);
+                        offset += elementLength.bytesRead;
+                        const element = buffer.slice(offset, offset + elementLength.value).toString();
+                        offset += elementLength.value;
+                        listValue.push(element);
+                    }
+                    keyValueMap.set(key, listValue.join(','));
+                    console.log(`Parsed list/set key-value pair: ${key} => ${listValue.join(',')}`);
+                    break;
+
+                default:
+                    console.log(`Skipping unsupported value type: ${valueType}`);
+                    // Skip unknown value types
                     const skipLength = readLength(buffer, offset);
                     offset += skipLength.bytesRead + skipLength.value;
-                }
             }
         }
     } catch (err) {
@@ -206,8 +217,7 @@ function parseRDBFile(filePath) {
         throw err;
     }
 
-    const entries = Array.from(keyValueMap.entries());
-    console.log('Parsed key-value pairs:', entries);
+    console.log('Parsed key-value pairs:', Array.from(keyValueMap.entries()));
     return keyValueMap;
 }
 
