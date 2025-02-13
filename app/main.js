@@ -101,7 +101,6 @@ function getOffsetToCRLF(buffer, offset) {
 const server = net.createServer((connection) => { //  new tcp server
 //    Handle connection
 const myMap=new Map();
-
 //keys.forEach((key) => myMap.set(key, { value: "dummy-value",expiryTime:null }));
 
 const keyValueMap = parseRDBFile(filePath);
@@ -186,7 +185,8 @@ connection.on('data',(data)=>{ // handeling incoming data
                         break;
 
                         case 'KEYS':
-                            if (args[0] === '*') {
+                            if (args[0] === '*') 
+                            {
                                 const validKeys = [...myMap.entries()]
                                     .filter(([_, value]) => !value.expiryTime || value.expiryTime > Date.now())
                                     .map(([key, _]) => key);
@@ -198,7 +198,8 @@ connection.on('data',(data)=>{ // handeling incoming data
                             break;
 
                             case 'CONFIG':
-                        if (args[0] === 'GET') {
+                        if (args[0] === 'GET') 
+                            {
                             const parameter = args[1];
                             if (parameter === 'dir') {
                                 connection.write(`*2\r\n$3\r\ndir\r\n$${dir.length}\r\n${dir}\r\n`);
@@ -226,8 +227,7 @@ connection.on("end",()=>console.log("Client disconnected")); // connection is  a
 });
 
  server.listen(6379, "127.0.0.1");
-....
 
 //  git add .
 // git commit --allow-empty -m "[any message]"
-// git push origin master
+// git push origin mast
